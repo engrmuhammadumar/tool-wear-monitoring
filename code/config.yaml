@@ -1,0 +1,163 @@
+# PHM 2010 RUL Prediction - Configuration File
+# Novel Physics-Informed Adaptive Conformal Prediction Framework
+
+# Data Configuration
+data:
+  root_path: "E:/Collaboration Work/With Farooq/phm dataset/PHM Challange 2010 Milling"
+  train_cutters: ['c1', 'c4', 'c6']
+  test_cutters: ['c2', 'c3', 'c5']
+  sampling_rate: 50000  # Hz (check your actual sampling rate)
+  
+  # Sensors available in PHM 2010
+  sensor_columns:
+    - 'smcAC'      # Spindle motor current AC
+    - 'smcDC'      # Spindle motor current DC
+    - 'vib_table'  # Vibration table
+    - 'vib_spindle' # Vibration spindle
+    - 'AE_table'   # Acoustic emission table
+    - 'AE_spindle' # Acoustic emission spindle
+  
+  target_column: 'tool_wear'  # or 'VB' (flank wear)
+
+# Feature Engineering
+features:
+  # Time domain features
+  time_domain:
+    - 'mean'
+    - 'std'
+    - 'rms'
+    - 'peak_to_peak'
+    - 'kurtosis'
+    - 'skewness'
+    - 'crest_factor'
+    - 'impulse_factor'
+    - 'shape_factor'
+  
+  # Frequency domain features
+  frequency_domain:
+    - 'fft_mean'
+    - 'fft_std'
+    - 'dominant_frequency'
+    - 'spectral_centroid'
+    - 'spectral_entropy'
+  
+  # Wavelet features
+  wavelet:
+    enabled: true
+    wavelet_type: 'db4'
+    levels: 5
+  
+  # Physics-based features (NOVEL)
+  physics_based:
+    enabled: true
+    cutting_force_ratio: true
+    wear_rate_indicator: true
+    energy_ratio: true
+
+# Model Configuration
+model:
+  name: 'PhysicsInformedAdaptiveRUL'
+  
+  # Feature extraction
+  feature_extractor:
+    type: 'CNN_LSTM'  # Options: 'CNN_LSTM', 'Transformer', 'TCN'
+    cnn_channels: [64, 128, 256]
+    lstm_hidden: 256
+    lstm_layers: 2
+    dropout: 0.3
+  
+  # Physics-informed constraints (NOVEL)
+  physics_constraints:
+    monotonicity: true
+    monotonicity_weight: 0.5
+    degradation_smoothness: true
+    smoothness_weight: 0.3
+  
+  # Multi-scale temporal attention (NOVEL)
+  temporal_attention:
+    enabled: true
+    scales: [1, 3, 5, 10]  # Different time scales
+    attention_heads: 8
+
+# Conformal Prediction (NOVEL - Adaptive)
+conformal:
+  enabled: true
+  method: 'adaptive'  # Our novel contribution
+  alpha: [0.1, 0.05]  # For 90% and 95% confidence
+  
+  # Adaptive conformal parameters (NOVEL)
+  adaptive:
+    degradation_aware: true
+    time_varying_scores: true
+    window_size: 50  # Adaptive window for score calculation
+
+# Training Configuration
+training:
+  batch_size: 32
+  epochs: 200
+  learning_rate: 0.001
+  optimizer: 'AdamW'
+  scheduler: 'CosineAnnealingWarmRestarts'
+  
+  # Early stopping
+  early_stopping:
+    patience: 30
+    min_delta: 0.001
+  
+  # Loss function
+  loss:
+    base_loss: 'mse'
+    physics_loss_weight: 0.3
+    monotonicity_loss_weight: 0.2
+  
+  # Data augmentation
+  augmentation:
+    noise_injection: 0.05
+    time_warping: true
+
+# Evaluation Metrics
+evaluation:
+  metrics:
+    # Point prediction metrics
+    - 'rmse'
+    - 'mae'
+    - 'mape'
+    - 'r2_score'
+    - 'phm_score'  # Official PHM challenge metric
+    
+    # Interval prediction metrics (NOVEL)
+    - 'coverage_rate'
+    - 'average_interval_width'
+    - 'adaptive_coverage'
+    - 'early_vs_late_coverage'
+  
+  # Cross-validation
+  cross_validation:
+    enabled: true
+    type: 'leave_one_out'  # Leave one cutter out
+
+# Visualization
+visualization:
+  plot_training_curves: true
+  plot_prediction_intervals: true
+  plot_attention_weights: true
+  plot_physics_constraints: true
+  save_format: ['png', 'pdf']
+  dpi: 300
+
+# Reproducibility
+seed: 42
+deterministic: true
+
+# Hardware
+hardware:
+  device: 'cuda'  # 'cuda' or 'cpu'
+  num_workers: 4
+  pin_memory: true
+
+# Logging
+logging:
+  log_dir: './logs'
+  tensorboard: true
+  save_checkpoints: true
+  checkpoint_dir: './checkpoints'
